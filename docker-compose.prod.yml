@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Database
+  db:
+    image: postgres:16-alpine
+    container_name: ai-hacker-db
+    environment:
+      POSTGRES_USER: hacker
+      POSTGRES_PASSWORD: hacker123
+      POSTGRES_DB: ai_hacker
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ai-network
+
+  # Backend API
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ai-hacker-api
+    environment:
+      DATABASE_URL: postgresql://hacker:hacker123@db:5432/ai_hacker
+      OPENAI_API_KEY: sk-test-key-here
+      PORT: 8000
+      DEBUG: "False"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - ai-network
+    restart: unless-stopped
+
+  # Frontend
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ai-hacker-web
+    ports:
+      - "80:3000"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - api
+    networks:
+      - ai-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  ai-network:
+    driver: bridge
